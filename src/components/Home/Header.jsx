@@ -1,26 +1,6 @@
-import { useEffect, useState } from "react"
 import SocialBar from "../Social/Index"
 
-const Header = ({photo,login}) => {
-    const [myAge, setAge] = useState()
-
-    const getAge = date => {
-        const today = new Date()
-        const birth = new Date(date)
-        let age = today.getFullYear() - birth.getFullYear()
-        const m = today.getMonth() - birth.getMonth()
-    
-        if (m < 0 || (m===0 && today.getDate() < birth.getDate())) {
-            age--
-        }
-        
-        setAge(age)
-    }
-
-    useEffect(() => {
-        getAge('04-11-1994')
-    },[])
-    
+const Header = ({photo, login}) => {
     return (
         <header className="text-light mt-5">
             <div className="row justify-content-center my-4">
@@ -31,7 +11,6 @@ const Header = ({photo,login}) => {
                             <strong>Subhibhat Srikham</strong>
                         </p>
                         <p><small>Si Sa Ket, Thailand</small></p>
-                        {/* <p>สวัสดีครับ, ผมชื่อสุพิพัฒน์ ศรีคำ ชื่อเล่น โอ๊ต อายุ {myAge} ปี<br />ปัจจุบันกำลังศึกษารัฐศาสตร์ แผน C (บริหารรัฐกิจ) มหาวิทยาลัยรามคำแหง </p> */}
                     </div>
                     <SocialBar />
                 </div>

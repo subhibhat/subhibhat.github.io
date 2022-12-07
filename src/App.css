@@ -2,12 +2,12 @@
 
 body {
     color: #ffffff;
-    background-color: #000000;
+    background-color: #242424;
 }
 
 header {
     top: 50%;
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: #242424;
     background-blend-mode: overlay;
 }
 

@@ -13,9 +13,7 @@ const SocialBar = () => {
 
     return (
         <ul className="m-0 p-0 social">
-            {data.map(item => {
-                return <SocialItem key={uuid()} icon={item.icon} url={item.url} />
-            })}
+            {data.map(item => <SocialItem key={uuid()} icon={item.icon} url={item.url} />)}
         </ul>
     )
 }
