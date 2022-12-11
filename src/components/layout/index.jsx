@@ -1,8 +1,9 @@
 import axios from "axios"
 import { useEffect, useState } from "react"
-import Header from "../../components/Home/Header"
+import Header from "./header"
 
-const Home = () => {
+export const Layout = ({children}) => {
+
     const [profile, setProfile] = useState({})
     
     const getGithubData = async () => {
@@ -19,8 +20,7 @@ const Home = () => {
     return (
         <div className="container">
             <Header photo={avatar_url} login={login} />
+            {children}
         </div>
     )
 }
-
-export default Home

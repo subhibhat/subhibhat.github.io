@@ -1,5 +1,5 @@
 import { v4 as uuid } from "uuid"
-import SocialItem from "./Item"
+import SocialItem from "./item"
 
 const SocialBar = () => {
 

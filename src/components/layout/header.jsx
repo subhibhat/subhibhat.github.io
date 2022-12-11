@@ -1,4 +1,5 @@
-import SocialBar from "../Social/Index"
+import SocialBar from "../social"
+import resumePdf from '../../assets/resume.pdf'
 
 const Header = ({photo, login}) => {
     return (
@@ -13,6 +14,9 @@ const Header = ({photo, login}) => {
                         <p><small>Si Sa Ket, Thailand</small></p>
                     </div>
                     <SocialBar />
+                    <div className="mt-2">
+                        <a href={resumePdf} rel="noreferrer noopener" target='_blank' className="btn btn-sm btn-outline-light">view my resume</a>
+                    </div>
                 </div>
             </div>
         </header>
