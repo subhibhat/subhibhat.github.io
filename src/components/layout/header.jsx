@@ -15,7 +15,7 @@ const Header = ({photo, login}) => {
                     </div>
                     <SocialBar />
                     <div className="mt-2">
-                        <a href={resumePdf} rel="noreferrer noopener" target='_blank' className="btn btn-sm btn-outline-light">view my resume</a>
+                        <a href="https://docs.google.com/document/d/1lHeTI6C2p9_qrxA0yFMtDU3pGWekeNDqrQuLeS_XKZI" rel="noreferrer noopener" target='_blank' className="btn btn-sm btn-outline-light">view my resume</a>
                     </div>
                 </div>
             </div>
