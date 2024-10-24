@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/static/css/main.43714cc8.css",
+    "main.js": "/static/js/main.10cfc373.js",
+    "static/media/fa-brands-400.ttf": "/static/media/fa-brands-400.0ff70dcbf135d859ebf3.ttf",
+    "static/media/resume.pdf": "/static/media/resume.1296ab46b672ced58519.pdf",
+    "static/media/fa-brands-400.woff2": "/static/media/fa-brands-400.bb8d5a145e22822103fb.woff2",
+    "index.html": "/index.html",
+    "main.43714cc8.css.map": "/static/css/main.43714cc8.css.map",
+    "main.10cfc373.js.map": "/static/js/main.10cfc373.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.43714cc8.css",
+    "static/js/main.10cfc373.js"
+  ]
+}
