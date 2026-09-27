@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   // Khai Tun's day: weather → play → eat → sleep (see lib/shapes/showcase.js); './lib/SphereScene.svelte' is the original sphere alone
   import Scene from './lib/MorphScene.svelte';
+  import SoundToggle from './lib/SoundToggle.svelte';
   import ThemeToggle from './lib/ThemeToggle.svelte';
   import TypedName from './lib/TypedName.svelte';
   import Weather from './lib/Weather.svelte';
@@ -9,6 +10,12 @@
   import { socials } from './lib/socials.js';
 
   let localTime = $state('');
+  let header;
+  let hero;
+
+  // On portrait screens Khai Tun lives in the gap between the header and the text
+  // (offsets rather than bounding rects, so the hero's fly-in animation doesn't skew the numbers)
+  const stage = () => (header && hero ? { top: header.offsetTop + header.offsetHeight, bottom: hero.offsetTop } : null);
 
   onMount(() => {
     const format = new Intl.DateTimeFormat('en-GB', {
@@ -23,18 +30,21 @@
   });
 </script>
 
-<Scene />
+<Scene {stage} />
 
 <main>
-  <header>
-    <span class="mark">Oat</span>
+  <header bind:this={header}>
+    <a class="mark" href="/">Oat &amp; Khai Tun</a>
     <div class="header-end">
-      <span class="meta"><span>Sisaket<span class="country">, TH</span></span> <Weather /> <span class="dot"></span> {localTime} ICT</span>
-      <ThemeToggle />
+      <span class="meta"><Weather /> <span class="clock"><span class="dot"></span> {localTime} ICT</span></span>
+      <div class="toggles">
+        <SoundToggle />
+        <ThemeToggle />
+      </div>
     </div>
   </header>
 
-  <section class="hero">
+  <section class="hero" bind:this={hero}>
     <p class="eyebrow">Developer — Go · Next.js · TypeScript</p>
     <TypedName lines={['Subhibhat', 'Srikam']} />
     <p class="lead">Hi, I'm Oat. I build quiet, useful software for the web — <br />usually with Khai Tun the pug snoring nearby.</p>
@@ -89,6 +99,12 @@
 
   .mark {
     color: var(--fg);
+    white-space: nowrap;
+  }
+
+  .toggles {
+    display: flex;
+    gap: 8px;
   }
 
   .header-end {
@@ -102,6 +118,12 @@
     align-items: center;
     gap: 8px;
     font-variant-numeric: tabular-nums;
+  }
+
+  .clock {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .dot {
@@ -195,9 +217,16 @@
     }
   }
 
+  /* landscape phones: Khai Tun sits on the right (MorphScene's LANDSCAPE_ASPECT), so keep the text left */
+  @media (max-width: 900px) and (min-aspect-ratio: 6/5) {
+    .hero {
+      max-width: 55%;
+    }
+  }
+
   @media (max-width: 420px) {
     .copy,
-    .country {
+    .clock {
       display: none;
     }
   }

@@ -6,16 +6,14 @@
   const START_DELAY_MS = 500;
   const TYPE_MS = 80;
   const LINE_PAUSE_MS = 280;
-  const CARET_LINGER_MS = 2600;
   const SCRAMBLE_TICK_MS = 45;
-  // how many letters ahead of the caret flicker before they settle
+  // how many letters ahead of the typed ones flicker before they settle
   const SCRAMBLE_AHEAD = 3;
   const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<>/_#';
 
   let typedCounts = $state(lines.map(() => 0));
   let activeLine = $state(0);
   let typing = $state(true);
-  let caretVisible = $state(true);
   let tick = $state(0);
 
   const randomGlyph = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
@@ -38,7 +36,6 @@
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       typedCounts = lines.map((line) => line.length);
       typing = false;
-      caretVisible = false;
       return;
     }
 
@@ -59,8 +56,6 @@
       }
       typing = false;
       clearInterval(scrambleTimer);
-      await sleep(CARET_LINGER_MS);
-      if (!cancelled) caretVisible = false;
     })();
 
     return () => {
@@ -73,11 +68,9 @@
 <h1 aria-label={lines.join(' ')}>
   {#each lines as line, lineIndex}
     <span class="line" aria-hidden="true">
-      {line.slice(0, typedCounts[lineIndex])}<span class="scramble">{scrambled(lineIndex, tick)}</span>{#if lineIndex === activeLine}<span
-          class="caret"
-          class:gone={!caretVisible}
-          class:blinking={!typing}
-        ></span>{/if}<span class="hidden">{hidden(lineIndex)}</span>
+      {line.slice(0, typedCounts[lineIndex])}<span class="scramble">{scrambled(lineIndex, tick)}</span><span class="hidden"
+        >{hidden(lineIndex)}</span
+      >
     </span>
   {/each}
 </h1>
@@ -106,29 +99,5 @@
 
   .hidden {
     visibility: hidden;
-  }
-
-  .caret {
-    display: inline-block;
-    width: 0.06em;
-    height: 0.72em;
-    margin-left: 0.06em;
-    background: currentColor;
-    transition: opacity 0.4s;
-  }
-
-  .caret.blinking {
-    animation: blink 1s steps(1) infinite;
-  }
-
-  .caret.gone {
-    opacity: 0;
-    animation: none;
-  }
-
-  @keyframes blink {
-    50% {
-      opacity: 0;
-    }
   }
 </style>

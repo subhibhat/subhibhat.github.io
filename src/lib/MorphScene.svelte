@@ -2,8 +2,13 @@
   import { onMount } from 'svelte';
   import * as THREE from 'three';
   import { EYE_CENTER_Y, PART } from './shapes/pug.js';
-  import { createShowcase, PUG_INDEX, WEATHER_INDEX } from './shapes/showcase.js';
+  import { onOccasion } from './occasions.js';
+  import { createShowcase, OCCASION_INDEX, PUG_INDEX, WEATHER_INDEX } from './shapes/showcase.js';
+  import { playBoop, setSoundScene } from './sound/index.js';
   import { onWeather } from './weather.js';
+
+  // `stage()` returns { top, bottom } in pixels: the free space he should fit into on portrait screens
+  let { stage = null } = $props();
 
   let canvas;
   let bubbles = $state([]);
@@ -20,6 +25,11 @@
   // falling rain/snow wraps within this band (pug-local units)
   const FALL_TOP = 1.7;
   const FALL_HEIGHT = 3.4;
+  // portrait layout: how much room (pug-local units) he and his hats/props need, and breathing space in px
+  const SHAPE_RADIUS = 1.55;
+  const SHAPE_HALF_WIDTH = 1.4;
+  const STAGE_PADDING = 16;
+  const LANDSCAPE_ASPECT = 1.2;
   const HIT_CENTER = new THREE.Vector3(0, 0, 0.3);
   const HIT_EDGE = new THREE.Vector3(1.3, 0, 0.3);
 
@@ -247,6 +257,7 @@
     let toIndex = 0;
     let transitionStart = 0;
     let weatherKnown = false;
+    let occasionToday = null;
 
     function morphTo(nextIndex, elapsed, leaving = steps[toIndex]) {
       fromStep = leaving;
@@ -265,12 +276,26 @@
       uniforms.uFromPug.value = isPug(fromStep);
       uniforms.uToPug.value = isPug(steps[toIndex]);
       uniforms.uSwing.value = steps[toIndex].enter.swing;
+      setSoundScene(steps[toIndex].sound);
     }
 
-    // the weather step is skipped until we know the weather
+    // the special-day step only plays on special days, and the weather step once we know the weather
     function nextStep(index) {
       const next = (index + 1) % steps.length;
-      return next === WEATHER_INDEX && !weatherKnown ? nextStep(next) : next;
+      const skip = (next === OCCASION_INDEX && !occasionToday) || (next === WEATHER_INDEX && !weatherKnown);
+      return skip ? nextStep(next) : next;
+    }
+
+    const now = () => (performance.now() - start) / 1000;
+
+    function onOccasionChange({ key, preview }) {
+      if (reducedMotion.matches) return;
+      const leaving = steps[toIndex];
+      occasionToday = key;
+      showcase.setOccasion(key);
+      // previews show straight away; turning the preview off moves on if it was showing
+      if (key && (preview || toIndex === OCCASION_INDEX)) morphTo(OCCASION_INDEX, now(), leaving);
+      else if (!key && toIndex === OCCASION_INDEX) morphTo(nextStep(OCCASION_INDEX), now(), leaving);
     }
 
     function onWeatherChange({ condition, preview }) {
@@ -280,9 +305,7 @@
       weatherKnown = true;
       showcase.setWeather(condition);
       // show it straight away when previewing, or if the page just opened on the weather step
-      if (preview || (firstReading && toIndex === WEATHER_INDEX)) {
-        morphTo(WEATHER_INDEX, (performance.now() - start) / 1000, leaving);
-      }
+      if (preview || (firstReading && toIndex === WEATHER_INDEX)) morphTo(WEATHER_INDEX, now(), leaving);
     }
 
     const pointer = new THREE.Vector2();
@@ -307,6 +330,7 @@
       if (Math.hypot(event.clientX - center.x, event.clientY - center.y) > radius) return;
 
       uniforms.uBoop.value = 1;
+      playBoop();
       const { boops } = uniforms.uProgress.value < 0.5 ? fromStep : steps[toIndex];
       const said = boopCounts.get(boops) ?? 0;
       boopCounts.set(boops, said + 1);
@@ -319,14 +343,27 @@
       const { innerWidth: width, innerHeight: height } = window;
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
-      const aspect = width / height;
-      const wide = width > 900;
-      // shrink on narrow or short viewports so shapes never crop
-      const fit = Math.max(0.6, Math.min(1, aspect / (wide ? 1.4 : 0.9)));
-      baseX = wide ? Math.min(1.1 * aspect * 0.5, 1.6) : 0;
-      baseY = wide ? 0 : 0.88;
-      points.scale.setScalar((wide ? 1.05 : 0.64) * fit);
       camera.updateProjectionMatrix();
+      const aspect = width / height;
+
+      // wide or landscape screens: Khai Tun sits to the right of the text
+      if (width > 900 || aspect > LANDSCAPE_ASPECT) {
+        baseX = Math.min(1.1 * aspect * 0.5, 1.6);
+        baseY = 0;
+        points.scale.setScalar(1.05 * Math.max(0.6, Math.min(1, aspect / 1.4)));
+        return;
+      }
+
+      // portrait: fit him into the free space between the header and the text below
+      const area = stage?.() ?? { top: height * 0.08, bottom: height * 0.5 };
+      const top = area.top + STAGE_PADDING;
+      const bottom = area.bottom - STAGE_PADDING;
+      const halfHeight = camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+      const worldPerPixel = (2 * halfHeight) / height;
+      const radius = Math.min((bottom - top) / 2 / SHAPE_RADIUS, (width / 2 - STAGE_PADDING) / SHAPE_HALF_WIDTH) * worldPerPixel;
+      baseX = 0;
+      baseY = halfHeight - ((top + bottom) / 2) * worldPerPixel;
+      points.scale.setScalar(Math.min(radius, 1.05));
     }
 
     const start = performance.now();
@@ -379,13 +416,19 @@
       frame = requestAnimationFrame(render);
     }
 
-    // the day starts with Khai Tun checking the weather (he looks like his playful self until it
-    // loads); with reduced motion he just sits there. (morphTo shifts `toIndex` into `fromStep`.)
-    toIndex = reducedMotion.matches ? PUG_INDEX : WEATHER_INDEX;
+    // the day starts with Khai Tun dressed up for a special day, or else checking the weather (he
+    // looks like his playful self until it loads); with reduced motion he just sits there.
+    // (morphTo shifts `toIndex` into `fromStep`.)
+    toIndex = PUG_INDEX;
+    const stopOccasion = onOccasion(onOccasionChange);
+    toIndex = reducedMotion.matches ? PUG_INDEX : occasionToday ? OCCASION_INDEX : WEATHER_INDEX;
     morphTo(toIndex, 0);
     const stopWeather = onWeather(onWeatherChange);
 
     resize();
+    // measure again once the page around us has mounted, and when the web fonts change the text height
+    requestAnimationFrame(resize);
+    document.fonts?.ready.then(resize);
     render();
     window.addEventListener('resize', resize);
     window.addEventListener('pointermove', onPointerMove);
@@ -395,6 +438,7 @@
     return () => {
       cancelAnimationFrame(frame);
       stopWeather();
+      stopOccasion();
       window.removeEventListener('resize', resize);
       window.removeEventListener('pointermove', onPointerMove);
       canvas.removeEventListener('pointerdown', onBoop);

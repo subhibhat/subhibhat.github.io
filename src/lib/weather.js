@@ -1,8 +1,20 @@
-// Current weather in Sisaket from Open-Meteo (free, no API key, callable from the browser),
+// Current weather where Oat is from Open-Meteo (free, no API key, callable from the browser),
 // shared by the header readout and Khai Tun's weather pose.
-const FORECAST_URL =
-  'https://api.open-meteo.com/v1/forecast?latitude=15.12&longitude=104.32&current=temperature_2m,weather_code,is_day&timezone=Asia%2FBangkok';
 const REFRESH_MS = 15 * 60 * 1000;
+
+// Oat works in Bangkok on weekdays and goes home to Sisaket for the weekend
+const LOCATIONS = {
+  bangkok: { name: 'Bangkok', latitude: 13.75, longitude: 100.5 },
+  sisaket: { name: 'Sisaket', latitude: 15.12, longitude: 104.32 },
+};
+
+export function locationToday() {
+  const weekday = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Bangkok', weekday: 'short' }).format(new Date());
+  return weekday === 'Sat' || weekday === 'Sun' ? LOCATIONS.sisaket : LOCATIONS.bangkok;
+}
+
+const forecastUrl = ({ latitude, longitude }) =>
+  `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day&timezone=Asia%2FBangkok`;
 
 export const CONDITIONS = ['clear', 'clearNight', 'partly', 'partlyNight', 'cloudy', 'cold', 'fog', 'drizzle', 'rain', 'storm', 'snow'];
 
@@ -49,8 +61,8 @@ const listeners = new Set();
 let timer = 0;
 
 function current() {
-  if (preview) return { condition: preview, label: LABELS[preview], temperature: reading?.temperature ?? null, preview: true };
-  return reading;
+  if (!preview) return reading;
+  return { condition: preview, label: LABELS[preview], temperature: reading?.temperature ?? null, location: reading?.location ?? locationToday().name, preview: true };
 }
 
 function emit() {
@@ -60,13 +72,14 @@ function emit() {
 
 async function load() {
   try {
-    const response = await fetch(FORECAST_URL);
+    const location = locationToday();
+    const response = await fetch(forecastUrl(location));
     if (!response.ok) return;
     const { current: latest } = await response.json();
     const temperature = Math.round(latest.temperature_2m);
     const sky = describe(latest.weather_code, latest.is_day === 1);
     const chilly = temperature < COLD_BELOW && DRY_SKIES.includes(sky.condition);
-    reading = { ...(chilly ? { condition: 'cold', label: LABELS.cold } : sky), temperature };
+    reading = { ...(chilly ? { condition: 'cold', label: LABELS.cold } : sky), temperature, location: location.name };
     emit();
   } catch {
     // offline or blocked: no weather, and Khai Tun just skips his weather pose
@@ -79,7 +92,7 @@ export function previewWeather(condition) {
   emit();
 }
 
-// Calls `listener` with { condition, label, temperature, preview? } now (if known) and whenever it changes.
+// Calls `listener` with { condition, label, temperature, location, preview? } now (if known) and whenever it changes.
 export function onWeather(listener) {
   listeners.add(listener);
   const weather = current();

@@ -1,26 +1,13 @@
 import * as THREE from 'three';
 import { assignProps, closedEyes, headPose, repose, scaredEyes } from './poses.js';
-import { randomDirection } from './random.js';
+import { alongPolyline, onSphere, pick, random, randomDirection } from './random.js';
 
-// Khai Tun reacting to the weather in Sisaket. Props borrow fur from the back of his head.
+// Khai Tun reacting to the weather wherever Oat is today. Props borrow fur from the back of his head.
 
 const RAIN_SPEED = 2.4;
 const DRIZZLE_SPEED = 1.3;
 const STORM_SPEED = 3.4;
 const SNOW_SPEED = 0.35;
-
-const random = (min, max) => min + Math.random() * (max - min);
-const pick = (items) => items[Math.floor(Math.random() * items.length)];
-
-// A point somewhere inside a thin tube along a polyline of [x, y, z] points
-function alongPolyline(points, radius) {
-  const segment = Math.floor(Math.random() * (points.length - 1));
-  const start = new THREE.Vector3(...points[segment]);
-  const end = new THREE.Vector3(...points[segment + 1]);
-  return start.lerp(end, Math.random()).add(randomDirection(new THREE.Vector3()).multiplyScalar(radius * Math.random()));
-}
-
-const onSphere = (center, radius) => randomDirection(new THREE.Vector3()).multiplyScalar(radius).add(center);
 
 // --- props ---
 
@@ -163,7 +150,7 @@ function fogBands(count) {
   return [[count, () => ({ point: point(), weight: 0.35 })]];
 }
 
-function snowfall(count) {
+export function snowfall(count) {
   const point = () => new THREE.Vector3(random(-2.1, 2.1), random(-1.7, 1.7), random(-0.5, 1.5));
   return [[count, () => ({ point: point(), weight: 1.1, fall: SNOW_SPEED })]];
 }
@@ -181,6 +168,38 @@ function scarf(count) {
   ];
 }
 
+// Knitted beanie: ribbed dome over the top of the head, a folded brim and a pom-pom
+function beanie(count) {
+  const crown = () => {
+    const direction = randomDirection(new THREE.Vector3());
+    direction.y = 0.12 + Math.abs(direction.y) * 0.88;
+    direction.normalize();
+    const point = new THREE.Vector3(direction.x * 1.22, 0.66 + direction.y * 0.68, 0.05 + direction.z * 1.12);
+    // ribs: alternating dense and faint stripes running up the hat
+    const rib = Math.sin(Math.atan2(point.z, point.x) * 26) > 0;
+    return { point, weight: rib ? 1.1 : 0.55 };
+  };
+  const brim = () => {
+    const angle = random(0, Math.PI * 2);
+    const tube = randomDirection(new THREE.Vector3()).multiplyScalar(0.08);
+    return { point: new THREE.Vector3(Math.cos(angle) * 1.27, 0.72, 0.05 + Math.sin(angle) * 1.16).add(tube), weight: 1.2 };
+  };
+  const pomPom = () => ({ point: onSphere(new THREE.Vector3(0, 1.44, 0.05), 0.13 * Math.cbrt(Math.random())), weight: 1.3 });
+  return [
+    [Math.round(count * 0.66), crown],
+    [Math.round(count * 0.24), brim],
+    [Math.round(count * 0.1), pomPom],
+  ];
+}
+
+// Foggy breath puffing out in front of his mouth
+function breathPuffs(count) {
+  return [
+    ...cloud(new THREE.Vector3(0.62, -0.62, 1.45), 0.3, Math.round(count * 0.6)),
+    ...cloud(new THREE.Vector3(0.95, -0.42, 1.45), 0.2, Math.round(count * 0.4)),
+  ];
+}
+
 // --- poses ---
 
 const LOOKING_UP = headPose(-0.16, 0);
@@ -195,6 +214,7 @@ export const WEATHER_POSES = {
       repose(pug, { head: headPose(-0.05, 0), props: assignProps(borrowed, [...sunglasses(), ...sun(new THREE.Vector3(1.75, 0.95, 0), 450)]) }),
     motion: { hop: 0.3, chew: 0, shiver: 0 },
     animation: 'pug',
+    sound: { ambience: 'birds' },
     boops: ['ร้อนจัง', 'ขอแอร์หน่อย', 'เท่ป่ะล่ะ'],
   },
   night: {
@@ -208,6 +228,7 @@ export const WEATHER_POSES = {
       }),
     motion: { hop: 0, chew: 0, shiver: 0 },
     animation: 'pug',
+    sound: { ambience: 'crickets' },
     boops: ['ดึกแล้วนะ', 'ดาวสวยจัง', 'ไม่ง่วงเลย'],
   },
   partly: {
@@ -218,6 +239,7 @@ export const WEATHER_POSES = {
       }),
     motion: { hop: 0.15, chew: 0, shiver: 0 },
     animation: 'pug',
+    sound: { ambience: 'birds' },
     boops: ['แดดบ้างเมฆบ้าง', 'เมฆเหมือนขนม', 'ร่ม ๆ ดี'],
   },
   cloudy: {
@@ -225,6 +247,7 @@ export const WEATHER_POSES = {
       repose(pug, { head: LOOKING_UP_TILTED, props: assignProps(borrowed, cloud(new THREE.Vector3(1.6, 0.95, 0.1), 0.85, 1800)) }),
     motion: { hop: 0, chew: 0, shiver: 0 },
     animation: 'pug',
+    sound: { ambience: 'breeze' },
     boops: ['ฟ้าครึ้ม ๆ', 'ฝนจะตกไหมนะ', 'เมฆเหมือนขนม'],
   },
   drizzle: {
@@ -236,6 +259,7 @@ export const WEATHER_POSES = {
       }),
     motion: { hop: 0, chew: 0, shiver: 0 },
     animation: 'still',
+    sound: { ambience: 'drizzle' },
     boops: ['ฝนปรอย ๆ', 'หมวกร่มเท่ป่ะ', 'ไม่อยากเปียก'],
   },
   rain: {
@@ -247,6 +271,7 @@ export const WEATHER_POSES = {
       }),
     motion: { hop: 0, chew: 0, shiver: 0 },
     animation: 'still',
+    sound: { ambience: 'rain' },
     boops: ['ฝนตกแล้ว', 'ไม่อยากเปียก', 'หมวกร่มเท่ป่ะ'],
   },
   storm: {
@@ -259,20 +284,40 @@ export const WEATHER_POSES = {
       }),
     motion: { hop: 0, chew: 0, shiver: 1 },
     animation: 'still',
+    sound: { cue: 'thunder', ambience: 'storm' },
     boops: ['กลัวฟ้าร้อง', 'ตัวสั่นแล้ว', 'อยากกลับบ้าน'],
   },
   fog: {
     build: (pug, borrowed) => repose(pug, { head: LEVEL, eyes: closedEyes(0), props: assignProps(borrowed, fogBands(2400)) }),
     motion: { hop: 0, chew: 0, shiver: 0 },
     animation: 'still',
+    sound: { ambience: 'wind' },
     boops: ['มองไม่เห็นเลย', 'หมอกลงแล้ว', 'ใครอยู่ตรงนั้น?'],
+  },
+  cold: {
+    build: (pug, borrowed) =>
+      repose(pug, {
+        head: headPose(0.04, -0.04),
+        closeMouth: true,
+        props: assignProps(borrowed, [...beanie(2000), ...scarf(1000), ...breathPuffs(450)]),
+      }),
+    motion: { hop: 0, chew: 0, shiver: 0.5 },
+    animation: 'still',
+    sound: { cue: 'brr', ambience: 'wind' },
+    boops: ['หนาวแล้วจ้า', 'หมวกไหมพรมอุ่นมาก', 'ขอผ้าห่มหน่อย'],
   },
   snow: {
     build: (pug, borrowed) =>
-      repose(pug, { head: LEVEL, eyes: closedEyes(0.06), closeMouth: true, props: assignProps(borrowed, [...scarf(1000), ...snowfall(900)]) }),
+      repose(pug, {
+        head: LEVEL,
+        eyes: closedEyes(0.06),
+        closeMouth: true,
+        props: assignProps(borrowed, [...beanie(1700), ...scarf(900), ...snowfall(800)]),
+      }),
     motion: { hop: 0, chew: 0, shiver: 0.6 },
     animation: 'still',
-    boops: ['หนาวววว', 'หิมะ?! ที่ศรีสะเกษ?', 'ขอผ้าห่มหน่อย'],
+    sound: { cue: 'brr', ambience: 'wind' },
+    boops: ['หนาวววว', 'หิมะ?! ในไทย?', 'ขอผ้าห่มหน่อย'],
   },
 };
 
@@ -286,6 +331,7 @@ const POSE_FOR_CONDITION = {
   drizzle: 'drizzle',
   rain: 'rain',
   storm: 'storm',
+  cold: 'cold',
   snow: 'snow',
 };
 

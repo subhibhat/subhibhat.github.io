@@ -1,15 +1,23 @@
 <script>
   import { onMount } from 'svelte';
-  import { onWeather } from './weather.js';
+  import { locationToday, onWeather } from './weather.js';
   import { WEATHER_ICONS } from './weatherIcons.js';
 
+  // Where Oat is today (Bangkok on weekdays, Sisaket at weekends) and the weather there
   let weather = $state(null);
+  let city = $state(locationToday().name);
 
-  onMount(() => onWeather((next) => (weather = next)));
+  onMount(() =>
+    onWeather((next) => {
+      weather = next;
+      city = next.location;
+    }),
+  );
 
   const temperature = $derived(weather?.temperature ?? '--');
 </script>
 
+<span>{city}<span class="country">, TH</span></span>
 {#if weather}
   <span class="weather" title={weather.label} aria-label="{weather.label}, {temperature} degrees Celsius">
     <svg viewBox="0 0 24 24" aria-hidden="true" class:spin={WEATHER_ICONS[weather.condition].spin}>
@@ -55,6 +63,12 @@
     from {
       opacity: 0;
       transform: translateY(-3px);
+    }
+  }
+
+  @media (max-width: 420px) {
+    .country {
+      display: none;
     }
   }
 

@@ -10,6 +10,8 @@ export const WEATHER_ICONS = {
   partly: { paths: ['M8 10.5a2.8 2.8 0 1 1 3.9-3.3', 'M8 2.5v1.2M3.2 7.7h1.2M4.6 4.3l.9.9', SMALL_CLOUD] },
   partlyNight: { paths: ['M11 7.5A3.5 3.5 0 0 1 6.4 12 4 4 0 1 0 11 7.5z', SMALL_CLOUD] },
   cloudy: { paths: [CLOUD] },
+  // thermometer running low, with a little snowflake
+  cold: { paths: ['M9 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z', 'M11 16.5v-2', 'M18 3v6M15.4 4.5l5.2 3M15.4 7.5l5.2-3'] },
   fog: { paths: ['M4 9h16M4 13h16M7 17h10'] },
   drizzle: { paths: [CLOUD_HIGH, 'M9 18v.5M13 18v.5M17 18v.5M11 21v.5M15 21v.5'] },
   rain: { paths: [CLOUD_HIGH, 'M9 17l-1 3M13 17l-1 3M17 17l-1 3'] },
