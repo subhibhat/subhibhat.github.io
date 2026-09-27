@@ -17,11 +17,8 @@
 <button
   class="toggle"
   class:on
-  onclick={(event) => {
-    // don't let this same click also count as the "first click" that restores sound
-    event.stopPropagation();
-    setSound(!on);
-  }}
+  data-sound-toggle
+  onclick={() => setSound(!on)}
   aria-pressed={on}
   aria-label={on ? 'Turn sound off' : 'Turn sound on'}
   title={on ? 'Sound off' : 'Sound on'}
