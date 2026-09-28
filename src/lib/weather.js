@@ -1,5 +1,8 @@
-// Current weather where Oat is from Open-Meteo (free, no API key, callable from the browser),
-// shared by the header readout and Khai Tun's weather pose.
+// Current weather from Open-Meteo (free, no API key, callable from the browser), shared by the
+// header readout and Khai Tun's weather pose. It's the weather where the visitor is once they let
+// us use their location, and where Oat is until then.
+import { locateVisitor, locationAllowed } from './visitorLocation.js';
+
 const REFRESH_MS = 15 * 60 * 1000;
 
 // Oat works in Bangkok on weekdays and goes home to Sisaket for the weekend
@@ -56,13 +59,14 @@ function conditionFromUrl() {
 }
 
 let reading = null;
+let visitor = null;
 let preview = conditionFromUrl();
 const listeners = new Set();
 let timer = 0;
 
 function current() {
   if (!preview) return reading;
-  return { condition: preview, label: LABELS[preview], temperature: reading?.temperature ?? null, location: reading?.location ?? locationToday().name, preview: true };
+  return { condition: preview, label: LABELS[preview], temperature: reading?.temperature ?? null, location: reading?.location ?? locationToday().name, here: reading?.here ?? false, preview: true };
 }
 
 function emit() {
@@ -72,18 +76,28 @@ function emit() {
 
 async function load() {
   try {
-    const location = locationToday();
+    const location = visitor ?? locationToday();
     const response = await fetch(forecastUrl(location));
     if (!response.ok) return;
     const { current: latest } = await response.json();
     const temperature = Math.round(latest.temperature_2m);
     const sky = describe(latest.weather_code, latest.is_day === 1);
     const chilly = temperature < COLD_BELOW && DRY_SKIES.includes(sky.condition);
-    reading = { ...(chilly ? { condition: 'cold', label: LABELS.cold } : sky), temperature, location: location.name };
+    reading = { ...(chilly ? { condition: 'cold', label: LABELS.cold } : sky), temperature, location: location.name, here: location === visitor };
     emit();
   } catch {
     // offline or blocked: no weather, and Khai Tun just skips his weather pose
   }
+}
+
+// Asks for the visitor's location and switches to the weather there; false if they say no
+// or are outside Thailand
+export async function useVisitorLocation() {
+  const found = await locateVisitor();
+  if (!found) return false;
+  visitor = found;
+  await load();
+  return true;
 }
 
 // `null` goes back to the real weather
@@ -92,13 +106,17 @@ export function previewWeather(condition) {
   emit();
 }
 
-// Calls `listener` with { condition, label, temperature, location, preview? } now (if known) and whenever it changes.
+// Calls `listener` with { condition, label, temperature, location, here, preview? } now (if known) and whenever it changes.
 export function onWeather(listener) {
   listeners.add(listener);
   const weather = current();
   if (weather) listener(weather);
   if (listeners.size === 1) {
-    load();
+    // someone who allowed their location on an earlier visit gets their own weather straight away
+    locationAllowed().then(async (allowed) => {
+      if (allowed) visitor = await locateVisitor();
+      load();
+    });
     timer = setInterval(load, REFRESH_MS);
   }
   return () => {
