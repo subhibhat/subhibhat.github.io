@@ -27,7 +27,7 @@
     <p class="label">Cookies &amp; privacy</p>
     <p class="text">
       No ads, no tracking, no cookies. With your OK this site remembers your theme and sound settings in this browser and
-      shows live weather from Open-Meteo.
+      can show the weather where you are.
     </p>
     <div class="actions">
       <button class="pill" onclick={rejectAll}>Reject all</button>
@@ -45,8 +45,9 @@
     </button>
   </div>
   <p class="intro">
-    This site sets no cookies and has no ads or analytics. These are the optional things it can do. Change your mind any
-    time from <em>Privacy</em> at the bottom of the page.
+    This site sets no cookies and has no ads or analytics. The weather in Sisaket comes from Open-Meteo, which sees your IP
+    address like any site you load. These are the optional things it can do. Change your mind any time from
+    <em>Privacy</em> at the bottom of the page.
   </p>
 
   <ul>

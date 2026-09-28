@@ -1,16 +1,20 @@
 <script>
   import { onMount } from 'svelte';
+  import { onConsent, openSettings } from './consent.js';
   import { FALLBACK_LOCATION, onWeather, useVisitorLocation } from './weather.js';
   import { WEATHER_ICONS } from './weatherIcons.js';
 
   // Sisaket (Oat's home) and the weather there, until the visitor taps the place name and lets us
   // use their location; then their province (or city, outside Thailand) and weather.
-  // No weather at all until the visitor allows it in their privacy choices.
+  // Without "weather" in their privacy choices, tapping the name opens those choices first,
+  // and we carry on locating them if they switch it on there.
   let weather = $state(null);
   let city = $state(FALLBACK_LOCATION.name);
   let country = $state(FALLBACK_LOCATION.country);
   let here = $state(false);
   let locating = $state(false);
+  let consented = false;
+  let locateAfterConsent = false;
 
   async function locate() {
     locating = true;
@@ -18,14 +22,30 @@
     locating = false;
   }
 
-  onMount(() =>
-    onWeather((next) => {
+  function tapPlace() {
+    if (consented) return locate();
+    locateAfterConsent = true;
+    openSettings();
+  }
+
+  onMount(() => {
+    const stopWeather = onWeather((next) => {
       weather = next;
       city = next?.location ?? FALLBACK_LOCATION.name;
       country = next?.country ?? FALLBACK_LOCATION.country;
       here = next?.here ?? false;
-    }),
-  );
+    });
+    const stopConsent = onConsent((consent) => {
+      consented = consent.weather;
+      if (consent.settingsOpen || !locateAfterConsent) return;
+      locateAfterConsent = false;
+      if (consented && !here) locate();
+    });
+    return () => {
+      stopWeather();
+      stopConsent();
+    };
+  });
 
   const temperature = $derived(weather?.temperature ?? '--');
 </script>
@@ -33,7 +53,7 @@
 {#if here || !weather}
   <span>{city}{#if country}<span class="country">, {country}</span>{/if}</span>
 {:else}
-  <button class="place" onclick={locate} disabled={locating} title="Show the weather where you are">
+  <button class="place" onclick={tapPlace} disabled={locating} title="Show the weather where you are">
     {city}{#if country}<span class="country">, {country}</span>{/if}
   </button>
 {/if}
