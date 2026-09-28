@@ -3,9 +3,10 @@ import { CUES } from './cues.js';
 import { startAudio, stopAudio } from './engine.js';
 import { duck, startMusic } from './music.js';
 
-// Sound is on by default, but browsers only allow audio after the visitor interacts with the page,
-// so it starts at their first click, tap or key press — unless they've switched it off before.
-// Poses describe their sound as { ambience, cue } — see AMBIENCES and CUES.
+// Sound is off until the visitor switches it on with the toggle. Once they have, we remember it,
+// and on later visits it comes back at their first click, tap or key press (browsers only allow
+// audio after the visitor interacts with the page). Poses describe their sound as { ambience, cue }
+// — see AMBIENCES and CUES.
 
 const STORAGE_KEY = 'sound';
 // cues longer than this turn the music down while they play
@@ -23,11 +24,12 @@ function remember(on) {
   } catch {}
 }
 
+// True only on a device where the visitor switched sound on before
 function wantsSound() {
   try {
-    return localStorage.getItem(STORAGE_KEY) !== 'off';
+    return localStorage.getItem(STORAGE_KEY) === 'on';
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -65,12 +67,15 @@ export function onSound(listener) {
   return () => listeners.delete(listener);
 }
 
-// Turns sound on at the visitor's first click, tap or key press, unless they switched it off last time
+// On a device where sound was switched on before, turns it back on at the visitor's first click,
+// tap or key press. Interactions with the toggle itself are left to the toggle (its click handler
+// runs after pointerdown/keydown, so acting on both would switch sound on and straight off again).
 export function restoreSound() {
   if (!wantsSound()) return () => {};
-  const resume = () => {
-    setSound(true);
+  const resume = (event) => {
     stop();
+    if (event.target instanceof Element && event.target.closest('[data-sound-toggle]')) return;
+    setSound(true);
   };
   const stop = () => {
     window.removeEventListener('pointerdown', resume);
