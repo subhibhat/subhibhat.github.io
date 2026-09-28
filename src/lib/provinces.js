@@ -80,7 +80,7 @@ const PROVINCES = [
   ['Narathiwat', 6.43, 101.82],
 ];
 
-// Farther than this from every provincial capital counts as outside Thailand
+// Farther than this from every provincial capital counts as outside Thailand (see visitorLocation.js)
 const MAX_KM = 150;
 
 function distanceKm(latitudeA, longitudeA, latitudeB, longitudeB) {

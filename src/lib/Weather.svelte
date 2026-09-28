@@ -1,13 +1,14 @@
 <script>
   import { onMount } from 'svelte';
-  import { locationToday, onWeather, useVisitorLocation } from './weather.js';
+  import { FALLBACK_LOCATION, onWeather, useVisitorLocation } from './weather.js';
   import { WEATHER_ICONS } from './weatherIcons.js';
 
-  // Where Oat is today (Bangkok on weekdays, Sisaket at weekends) and the weather there, until the
-  // visitor taps the place name and lets us use their location; then their province and weather.
+  // Sisaket (Oat's home) and the weather there, until the visitor taps the place name and lets us
+  // use their location; then their province (or city, outside Thailand) and weather.
   // No weather at all until the visitor allows it in their privacy choices.
   let weather = $state(null);
-  let city = $state(locationToday().name);
+  let city = $state(FALLBACK_LOCATION.name);
+  let country = $state(FALLBACK_LOCATION.country);
   let here = $state(false);
   let locating = $state(false);
 
@@ -20,7 +21,8 @@
   onMount(() =>
     onWeather((next) => {
       weather = next;
-      city = next?.location ?? locationToday().name;
+      city = next?.location ?? FALLBACK_LOCATION.name;
+      country = next?.country ?? FALLBACK_LOCATION.country;
       here = next?.here ?? false;
     }),
   );
@@ -29,10 +31,10 @@
 </script>
 
 {#if here || !weather}
-  <span>{city}<span class="country">, TH</span></span>
+  <span>{city}{#if country}<span class="country">, {country}</span>{/if}</span>
 {:else}
   <button class="place" onclick={locate} disabled={locating} title="Show the weather where you are">
-    {city}<span class="country">, TH</span>
+    {city}{#if country}<span class="country">, {country}</span>{/if}
   </button>
 {/if}
 {#if weather}

@@ -22,7 +22,7 @@ export const CATEGORIES = [
     id: 'weather',
     title: 'Live weather',
     description:
-      'Loads the current weather from Open-Meteo (open-meteo.com), which receives your IP address. If you also tap the place name and allow your location, the request includes your position rounded to about 1 km.',
+      'Loads the current weather from Open-Meteo (open-meteo.com), which receives your IP address. If you also tap the place name and allow your location, your position rounded to about 1 km goes to Open-Meteo for the forecast and, outside Thailand, to BigDataCloud (bigdatacloud.com) to name the city.',
   },
 ];
 
