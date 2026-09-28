@@ -1,8 +1,8 @@
 // Current weather from Open-Meteo (free, no API key, callable from the browser), shared by the
 // header readout and Khai Tun's weather pose. It's the weather where the visitor is once they let
-// us use their location, and Sisaket (Oat's home) until then. Nothing is fetched unless the visitor allowed
-// "weather" in their privacy choices (see consent.js).
-import { onConsent } from './consent.js';
+// us use their location, and Sisaket (Oat's home) until then. Sisaket's weather always loads; the
+// visitor's own place only if they allowed "weather" in their privacy choices (see consent.js).
+import { allowed, onConsent } from './consent.js';
 import { locateVisitor, locationAllowed } from './visitorLocation.js';
 
 const REFRESH_MS = 15 * 60 * 1000;
@@ -65,7 +65,7 @@ function current() {
   return { condition: preview, label: LABELS[preview], temperature: reading?.temperature ?? null, location: reading?.location ?? FALLBACK_LOCATION.name, country: reading?.country ?? FALLBACK_LOCATION.country, here: reading?.here ?? false, preview: true };
 }
 
-// Listeners get null when the weather goes away (the visitor switched it off)
+// Listeners get null when there's no weather to show
 function emit() {
   const weather = current();
   listeners.forEach((listener) => listener(weather));
@@ -78,7 +78,8 @@ async function load() {
     const response = await fetch(forecastUrl(location));
     if (!response.ok) return;
     const { current: latest } = await response.json();
-    if (!live) return;
+    // stopped, or the place changed while this was loading (a newer load will report)
+    if (!live || location !== (visitor ?? FALLBACK_LOCATION)) return;
     const temperature = Math.round(latest.temperature_2m);
     const sky = describe(latest.weather_code, latest.is_day === 1);
     const chilly = temperature < COLD_BELOW && DRY_SKIES.includes(sky.condition);
@@ -92,12 +93,21 @@ async function load() {
 // Asks for the visitor's location and switches to the weather there; false if they say no
 // or we can't name the place
 export async function useVisitorLocation() {
-  if (!live) return false;
-  const found = await locateVisitor();
-  if (!found) return false;
-  visitor = found;
-  await load();
-  return true;
+  if (!live || !allowed('weather')) return false;
+  return switchToVisitor();
+}
+
+// One lookup at a time, however many things ask for it at once
+let switching = null;
+function switchToVisitor() {
+  switching ??= (async () => {
+    const found = await locateVisitor();
+    if (!found || !live || !allowed('weather')) return false;
+    visitor = found;
+    await load();
+    return true;
+  })().finally(() => (switching = null));
+  return switching;
 }
 
 // `null` goes back to the real weather
@@ -109,11 +119,7 @@ export function previewWeather(condition) {
 function start() {
   if (live) return;
   live = true;
-  // someone who allowed their location on an earlier visit gets their own weather straight away
-  locationAllowed().then(async (allowed) => {
-    if (allowed && live) visitor = await locateVisitor();
-    load();
-  });
+  load();
   timer = setInterval(load, REFRESH_MS);
 }
 
@@ -122,7 +128,19 @@ function stop() {
   live = false;
   clearInterval(timer);
   reading = visitor = null;
-  emit();
+}
+
+// Consent for the visitor's own place: someone who also allowed their location on an earlier visit
+// gets their own weather straight away; taking consent back returns to Sisaket
+async function onLocationConsent({ weather: consented }) {
+  if (consented) {
+    if (!visitor && (await locationAllowed())) switchToVisitor();
+  } else if (visitor) {
+    // stop showing their place right away, then fetch Sisaket's weather again
+    visitor = reading = null;
+    emit();
+    load();
+  }
 }
 
 // Calls `listener` with { condition, label, temperature, location, country, here, preview? } now (if known) and whenever it
@@ -131,7 +149,10 @@ export function onWeather(listener) {
   listeners.add(listener);
   const weather = current();
   if (weather) listener(weather);
-  if (listeners.size === 1) stopConsent = onConsent(({ weather: allowed }) => (allowed ? start() : stop()));
+  if (listeners.size === 1) {
+    start();
+    stopConsent = onConsent(onLocationConsent);
+  }
   return () => {
     listeners.delete(listener);
     if (listeners.size === 0) {

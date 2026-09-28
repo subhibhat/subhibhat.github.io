@@ -1,8 +1,8 @@
 // The visitor's privacy choices. Nothing optional runs until they say yes:
 // - preferences: remember the theme and sound switches in localStorage
-// - weather: ask Open-Meteo for the live weather (they see the visitor's IP address)
+// - weather: the weather where the visitor is, from their location (see visitorLocation.js)
 // Without a choice, or after "Reject all", the switches still work but are forgotten on reload,
-// and the header shows no weather. The choice itself is kept for a year, then we ask again.
+// and the header shows Sisaket's weather. The choice itself is kept for a year, then we ask again.
 // index.html reads the same record before the page draws, to apply a remembered theme.
 
 const KEY = 'consent';
@@ -20,9 +20,9 @@ export const CATEGORIES = [
   },
   {
     id: 'weather',
-    title: 'Live weather',
+    title: 'Weather where you are',
     description:
-      'Loads the current weather from Open-Meteo (open-meteo.com), which receives your IP address. If you also tap the place name and allow your location, your position rounded to about 1 km goes to Open-Meteo for the forecast and, outside Thailand, to BigDataCloud (bigdatacloud.com) to name the city.',
+      'Lets you tap the place name at the top to see your own weather. After your browser asks for your location, your position rounded to about 1 km goes to Open-Meteo (open-meteo.com) for the forecast and, outside Thailand, to BigDataCloud (bigdatacloud.com) to name the city.',
   },
 ];
 
