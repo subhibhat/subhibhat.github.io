@@ -1,4 +1,6 @@
 <script>
+  import { rememberPreference } from './consent.js';
+
   const THEME_COLORS = { dark: '#0b0b0c', light: '#f4f3ef' };
   const REVEAL_DURATION_MS = 750;
 
@@ -9,9 +11,7 @@
     theme = next;
     document.documentElement.dataset.theme = next;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[next]);
-    try {
-      localStorage.setItem('theme', next);
-    } catch {}
+    rememberPreference('theme', next);
   }
 
   function toggle() {

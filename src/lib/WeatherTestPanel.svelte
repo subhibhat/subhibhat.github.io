@@ -9,7 +9,7 @@
   let occasion = $state(undefined);
 
   onMount(() => {
-    const stopWeather = onWeather((next) => (weather = next.preview ? next.condition : null));
+    const stopWeather = onWeather((next) => (weather = next?.preview ? next.condition : null));
     const stopOccasion = onOccasion((next) => (occasion = next.preview ? next.key : undefined));
     return () => {
       stopWeather();

@@ -1,23 +1,42 @@
 <script>
   import { onMount } from 'svelte';
-  import { locationToday, onWeather } from './weather.js';
+  import { FALLBACK_LOCATION, onWeather, useVisitorLocation } from './weather.js';
   import { WEATHER_ICONS } from './weatherIcons.js';
 
-  // Where Oat is today (Bangkok on weekdays, Sisaket at weekends) and the weather there
+  // Sisaket (Oat's home) and the weather there, until the visitor taps the place name and lets us
+  // use their location; then their province (or city, outside Thailand) and weather.
+  // No weather at all until the visitor allows it in their privacy choices.
   let weather = $state(null);
-  let city = $state(locationToday().name);
+  let city = $state(FALLBACK_LOCATION.name);
+  let country = $state(FALLBACK_LOCATION.country);
+  let here = $state(false);
+  let locating = $state(false);
+
+  async function locate() {
+    locating = true;
+    await useVisitorLocation();
+    locating = false;
+  }
 
   onMount(() =>
     onWeather((next) => {
       weather = next;
-      city = next.location;
+      city = next?.location ?? FALLBACK_LOCATION.name;
+      country = next?.country ?? FALLBACK_LOCATION.country;
+      here = next?.here ?? false;
     }),
   );
 
   const temperature = $derived(weather?.temperature ?? '--');
 </script>
 
-<span>{city}<span class="country">, TH</span></span>
+{#if here || !weather}
+  <span>{city}{#if country}<span class="country">, {country}</span>{/if}</span>
+{:else}
+  <button class="place" onclick={locate} disabled={locating} title="Show the weather where you are">
+    {city}{#if country}<span class="country">, {country}</span>{/if}
+  </button>
+{/if}
 {#if weather}
   <span class="weather" title={weather.label} aria-label="{weather.label}, {temperature} degrees Celsius">
     <svg viewBox="0 0 24 24" aria-hidden="true" class:spin={WEATHER_ICONS[weather.condition].spin}>
@@ -36,6 +55,34 @@
     gap: 5px;
     color: var(--fg);
     animation: appear 0.6s ease both;
+  }
+
+  .place {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    text-decoration: underline dotted;
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+    text-underline-offset: 3px;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+
+  .place:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .place:focus-visible {
+    outline: 1px solid var(--fg);
+    outline-offset: 3px;
+  }
+
+  .place:disabled {
+    cursor: progress;
   }
 
   svg {

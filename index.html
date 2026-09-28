@@ -6,15 +6,15 @@
     <meta name="description" content="Subhibhat (Oat) Srikam — Go, Next.js &amp; TypeScript developer from Sisaket, Thailand." />
     <meta name="theme-color" content="#0b0b0c" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400&family=Noto+Sans+Thai:wght@300;400&display=swap" rel="stylesheet" />
     <title>Subhibhat Srikam</title>
     <script>
+      // a remembered theme only counts if the visitor allowed "preferences" (see src/lib/consent.js)
       (() => {
         let theme;
         try {
-          theme = localStorage.getItem('theme');
+          const consent = JSON.parse(localStorage.getItem('consent'));
+          const fresh = consent?.version === 1 && Date.now() - Date.parse(consent.at) < 365 * 24 * 60 * 60 * 1000;
+          if (fresh && consent.preferences) theme = localStorage.getItem('theme');
         } catch {}
         if (theme !== 'light' && theme !== 'dark') {
           theme = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
