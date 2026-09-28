@@ -4,7 +4,8 @@
   import { WEATHER_ICONS } from './weatherIcons.js';
 
   // Where Oat is today (Bangkok on weekdays, Sisaket at weekends) and the weather there, until the
-  // visitor taps the place name and lets us use their location; then their province and weather
+  // visitor taps the place name and lets us use their location; then their province and weather.
+  // No weather at all until the visitor allows it in their privacy choices.
   let weather = $state(null);
   let city = $state(locationToday().name);
   let here = $state(false);
@@ -19,15 +20,15 @@
   onMount(() =>
     onWeather((next) => {
       weather = next;
-      city = next.location;
-      here = next.here;
+      city = next?.location ?? locationToday().name;
+      here = next?.here ?? false;
     }),
   );
 
   const temperature = $derived(weather?.temperature ?? '--');
 </script>
 
-{#if here}
+{#if here || !weather}
   <span>{city}<span class="country">, TH</span></span>
 {:else}
   <button class="place" onclick={locate} disabled={locating} title="Show the weather where you are">

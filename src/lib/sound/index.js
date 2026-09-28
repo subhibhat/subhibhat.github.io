@@ -1,3 +1,4 @@
+import { recallPreference, rememberPreference } from '../consent.js';
 import { AMBIENCES } from './ambience.js';
 import { CUES } from './cues.js';
 import { startAudio, stopAudio } from './engine.js';
@@ -18,19 +19,14 @@ let stopAmbience = null;
 let stopMusic = null;
 const listeners = new Set();
 
+// Stored only if the visitor allowed "preferences" (see consent.js); otherwise just for this visit
 function remember(on) {
-  try {
-    localStorage.setItem(STORAGE_KEY, on ? 'on' : 'off');
-  } catch {}
+  rememberPreference(STORAGE_KEY, on ? 'on' : 'off');
 }
 
 // True only on a device where the visitor switched sound on before
 function wantsSound() {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === 'on';
-  } catch {
-    return false;
-  }
+  return recallPreference(STORAGE_KEY) === 'on';
 }
 
 function play(next) {

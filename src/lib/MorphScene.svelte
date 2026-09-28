@@ -298,7 +298,13 @@
       else if (!key && toIndex === OCCASION_INDEX) morphTo(nextStep(OCCASION_INDEX), now(), leaving);
     }
 
-    function onWeatherChange({ condition, preview }) {
+    function onWeatherChange(weather) {
+      // the visitor switched weather off: skip the weather step from now on
+      if (!weather) {
+        weatherKnown = false;
+        return;
+      }
+      const { condition, preview } = weather;
       if (reducedMotion.matches) return;
       const firstReading = !weatherKnown;
       const leaving = steps[toIndex];

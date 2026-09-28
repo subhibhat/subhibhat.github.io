@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   // Khai Tun's day: weather → play → eat → sleep (see lib/shapes/showcase.js); './lib/SphereScene.svelte' is the original sphere alone
   import Scene from './lib/MorphScene.svelte';
+  import CookieConsent from './lib/CookieConsent.svelte';
+  import { openSettings as openPrivacySettings } from './lib/consent.js';
   import SoundToggle from './lib/SoundToggle.svelte';
   import ThemeToggle from './lib/ThemeToggle.svelte';
   import TypedName from './lib/TypedName.svelte';
@@ -51,7 +53,7 @@
   </section>
 
   <footer>
-    <span class="copy">© {new Date().getFullYear()}</span>
+    <span class="copy">© {new Date().getFullYear()} · <button class="privacy" onclick={openPrivacySettings}>Privacy</button></span>
 
     <nav aria-label="Social links">
       {#each socials as social}
@@ -64,6 +66,8 @@
     </nav>
   </footer>
 </main>
+
+<CookieConsent />
 
 {#if import.meta.env.DEV}
   <WeatherTestPanel />
@@ -151,6 +155,31 @@
     margin-top: 28px;
     font-size: clamp(15px, 1.4vw, 18px);
     color: var(--muted);
+  }
+
+  .privacy {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-decoration: underline dotted;
+    text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+    text-underline-offset: 3px;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: color 0.3s;
+  }
+
+  .privacy:hover {
+    color: var(--fg);
+    text-decoration-color: currentColor;
+  }
+
+  .privacy:focus-visible {
+    outline: 1px solid var(--fg);
+    outline-offset: 3px;
   }
 
   nav {

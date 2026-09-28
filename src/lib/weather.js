@@ -1,6 +1,8 @@
 // Current weather from Open-Meteo (free, no API key, callable from the browser), shared by the
 // header readout and Khai Tun's weather pose. It's the weather where the visitor is once they let
-// us use their location, and where Oat is until then.
+// us use their location, and where Oat is until then. Nothing is fetched unless the visitor allowed
+// "weather" in their privacy choices (see consent.js).
+import { onConsent } from './consent.js';
 import { locateVisitor, locationAllowed } from './visitorLocation.js';
 
 const REFRESH_MS = 15 * 60 * 1000;
@@ -63,23 +65,28 @@ let visitor = null;
 let preview = conditionFromUrl();
 const listeners = new Set();
 let timer = 0;
+let live = false;
+let stopConsent = null;
 
 function current() {
   if (!preview) return reading;
   return { condition: preview, label: LABELS[preview], temperature: reading?.temperature ?? null, location: reading?.location ?? locationToday().name, here: reading?.here ?? false, preview: true };
 }
 
+// Listeners get null when the weather goes away (the visitor switched it off)
 function emit() {
   const weather = current();
-  if (weather) listeners.forEach((listener) => listener(weather));
+  listeners.forEach((listener) => listener(weather));
 }
 
 async function load() {
+  if (!live) return;
   try {
     const location = visitor ?? locationToday();
     const response = await fetch(forecastUrl(location));
     if (!response.ok) return;
     const { current: latest } = await response.json();
+    if (!live) return;
     const temperature = Math.round(latest.temperature_2m);
     const sky = describe(latest.weather_code, latest.is_day === 1);
     const chilly = temperature < COLD_BELOW && DRY_SKIES.includes(sky.condition);
@@ -93,6 +100,7 @@ async function load() {
 // Asks for the visitor's location and switches to the weather there; false if they say no
 // or are outside Thailand
 export async function useVisitorLocation() {
+  if (!live) return false;
   const found = await locateVisitor();
   if (!found) return false;
   visitor = found;
@@ -106,21 +114,37 @@ export function previewWeather(condition) {
   emit();
 }
 
-// Calls `listener` with { condition, label, temperature, location, here, preview? } now (if known) and whenever it changes.
+function start() {
+  if (live) return;
+  live = true;
+  // someone who allowed their location on an earlier visit gets their own weather straight away
+  locationAllowed().then(async (allowed) => {
+    if (allowed && live) visitor = await locateVisitor();
+    load();
+  });
+  timer = setInterval(load, REFRESH_MS);
+}
+
+function stop() {
+  if (!live) return;
+  live = false;
+  clearInterval(timer);
+  reading = visitor = null;
+  emit();
+}
+
+// Calls `listener` with { condition, label, temperature, location, here, preview? } now (if known) and whenever it
+// changes, or with null when the weather goes away.
 export function onWeather(listener) {
   listeners.add(listener);
   const weather = current();
   if (weather) listener(weather);
-  if (listeners.size === 1) {
-    // someone who allowed their location on an earlier visit gets their own weather straight away
-    locationAllowed().then(async (allowed) => {
-      if (allowed) visitor = await locateVisitor();
-      load();
-    });
-    timer = setInterval(load, REFRESH_MS);
-  }
+  if (listeners.size === 1) stopConsent = onConsent(({ weather: allowed }) => (allowed ? start() : stop()));
   return () => {
     listeners.delete(listener);
-    if (listeners.size === 0) clearInterval(timer);
+    if (listeners.size === 0) {
+      stopConsent?.();
+      stop();
+    }
   };
 }
